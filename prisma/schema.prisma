@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AppSetting {
+  id        Int      @id @default(1)
+  lastStock String   @default("002281.SZ")
+  prefs     Json     @default("{}")
+  llm       Json     @default("{}")
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+}
+
+model Watchlist {
+  symbol    String   @id
+  name      String
+  sort      Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+model DailySignal {
+  id         String   @id @default(cuid())
+  symbol     String
+  tradeDate  String
+  highPoints Json     @default("[]")
+  lowPoints  Json     @default("[]")
+  strategy   Json     @default("{}")
+  coverage   Json     @default("{}")
+  runtime    Json     @default("{}")
+  updatedAt  DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([symbol, tradeDate])
+  @@index([tradeDate])
+}
+
+model AnalysisReport {
+  id             String   @id @default(cuid())
+  symbol         String
+  tradeDate      String
+  targetDate     String?
+  type           String
+  version        Int      @default(1)
+  idempotencyKey String   @unique
+  content        Json
+  sources        Json     @default("[]")
+  inputSummary   Json     @default("{}")
+  evaluation     Json?
+  model          String
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([symbol, tradeDate, type, version])
+  @@index([createdAt])
+}

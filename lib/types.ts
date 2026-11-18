@@ -1,0 +1,64 @@
+export type StockRef = { symbol: string; code: string; name: string; exchange: "SH" | "SZ" | "BJ"; initials?: string };
+export type Quality = "ready" | "stale" | "unknown" | "unsupported" | "warming";
+export type Quote = StockRef & {
+  price: number; previousClose: number; open: number; high: number; low: number;
+  change: number; changePercent: number; volume: number; amount: number;
+  sourceAt: number | null; observedAt: number; provider: string;
+  bid: number | null; ask: number | null; bidSize: number | null; askSize: number | null;
+  turnover: number | null; pe: number | null; pb: number | null;
+  marketCap: number | null; circulatingCap: number | null;
+};
+export type Bar = { time: string; open: number; close: number; high: number; low: number; volume: number; amount?: number };
+export type Minute = { time: string; sourceTime?: string; price: number; volume: number; average: number | null };
+export type Intraday = { date: string; points: Minute[]; provider: string; fetchedAt: number; complete: boolean };
+export type MinuteBar = { time: string; at: number; completedAt: number; open: number | null; close: number; high: number; low: number; volume: number; amount: number; average: number | null };
+export type MinuteHistory = { bars: MinuteBar[]; provider: string; fetchedAt: number; missing: string[] };
+export type ScoreGroup = { name: string; score: number; max: number; detail: string };
+export type OpportunityTemplate = "RANGE_REVERSION" | "TREND_PULLBACK" | "TREND_EXHAUSTION";
+export const TEMPLATE_LABELS: Record<OpportunityTemplate, string> = { RANGE_REVERSION: "震荡边界", TREND_PULLBACK: "顺势回踩 / 反弹", TREND_EXHAUSTION: "逆势衰竭" };
+export type SignalAssessment = { type: PointType; score: number; groups: ScoreGroup[]; blockers: string[]; armed: boolean; template?: OpportunityTemplate; missing?: string[] };
+type ReplayCandidate = { at: number; price: number; score: number; blockers: string[]; template?: OpportunityTemplate };
+export type ReplayAssessment = { evaluated: number; armed: number; scorePassed: number; filtersPassed: number; qualified: number; warming: number; dataLimited: number; blocked: Record<string, number>; closest: ReplayCandidate | null; bestUnblocked: ReplayCandidate | null };
+export type Evidence = { id: string; title: string; url: string; publishedAt: string | null; fetchedAt: string; summary: string; publisher: string };
+export type Company = { name: string; introduction: string | null; business: string | null; industry: string | null; listedAt: string | null; website: string | null; region: string | null; provider: string; fetchedAt: string; url: string };
+export type Regime = "RANGE" | "UPTREND" | "STRONG_UP" | "DOWNTREND" | "STRONG_DOWN" | "UNCERTAIN";
+export type Observation = { at: number; availableAt: number; price: number; volume: number; amount: number; bid: number | null; ask: number | null; bidSize: number | null; askSize: number | null; marketReturn: number | null; dayHigh?: number; dayLow?: number };
+export type PointAi = { status: "approved" | "rejected" | "unavailable" | "not_configured" | "historical_skipped"; summary: string; risks: string[]; model: string | null; snapshotAt: number; startedAt: number; finishedAt: number };
+export type PointType = "HIGH" | "LOW";
+export type Point = {
+  id: string; type: PointType; sequenceNo: number; pivotAt: number; pivotPrice: string;
+  confirmedAt: number; quoteAtConfirmation: string; ruleScore: number; regime: Regime;
+  reasons: string[]; invalidationRule: { price: number; direction: "above" | "below" };
+  strategyVersion: string; dataProfile: string;
+  mode?: "historical" | "live"; recordedAt?: number;
+  ai?: PointAi;
+  inputSnapshot: { samples: Observation[]; provider: string; market: number | null; missing: string[]; cutoffAt?: number; sourceKind?: "quote" | "minute-close"; marketSample?: Observation; bars?: MinuteBar[]; marketBars?: MinuteBar[]; features?: Record<string, number | string | boolean | null>; groups?: ScoreGroup[]; hardFilters?: string[]; excursionAt?: number };
+  riskEvents: { type: "invalidated"; at: number; price: number; reason: string }[];
+  pairWithPointId?: string;
+};
+export type SignalState = {
+  symbol: string; date: string; highPoints: Point[]; lowPoints: Point[];
+  quality: Quality; regime: Regime; message: string; samples: number; monitoredSince: number | null;
+  lastObservedAt: number | null; missing: string[]; assessment?: SignalAssessment[]; strategyVersion?: string;
+  pendingAi?: { type: PointType; score: number; startedAt: number } | null;
+  coverage: { auction?: AuctionSnapshot; lastAiVeto?: { type: PointType; score: number; triggerAt: number; reviewedAt: number; summary: string; model: string | null }; gaps?: { from: number; to: number }[]; replay?: { status: "pending" | "complete" | "partial" | "failed"; bars: number; from: number | null; to: number | null; fetchedAt: number; message: string; assessments?: Record<PointType, ReplayAssessment> } };
+};
+export const REPORT_TYPES = ["COMPANY_RESEARCH", "AUCTION_OUTLOOK", "POST_CLOSE_REVIEW", "NEXT_SESSION_OUTLOOK"] as const;
+export type ReportType = (typeof REPORT_TYPES)[number];
+export type Scenario = { direction: "偏强" | "震荡" | "偏弱"; description: string; trigger: string; invalidation: string; levels: string[]; evidenceIds: string[] };
+export type ReportContent = { title: string; summary: string; sections: { title: string; body: string; evidenceIds: string[] }[]; scenarios: Scenario[]; risks: string[]; missing: string[] };
+export type StoredReport = { id: string; symbol: string; tradeDate: string; targetDate: string | null; type: ReportType; version: number; content: ReportContent; sources: Evidence[]; model: string; createdAt: string; inputSummary: Record<string, unknown> };
+export type Context = { indices: Quote[]; industry: { name: string; changePercent: number | null; sourceAt: number | null } | null; missing: string[] };
+export type AuctionInstrument = {
+  symbol: string; name: string; price: number; previousClose: number | null;
+  volume: number; amount: number; sourceAt: number; availableAt: number;
+  samples: { at: number; availableAt: number; price: number; volume: number; amount: number }[];
+};
+export type AuctionSnapshot = {
+  version: 1; symbol: string; tradeDate: string; cutoffAt: number; capturedAt: number;
+  stock: AuctionInstrument; indices: AuctionInstrument[];
+  industry: { name: string; code: string; quote: AuctionInstrument } | null;
+  missing: string[];
+};
+export const REPORT_LABELS: Record<ReportType, string> = { COMPANY_RESEARCH: "AI 深度投研", AUCTION_OUTLOOK: "竞价后研判", POST_CLOSE_REVIEW: "收盘复盘", NEXT_SESSION_OUTLOOK: "下一交易日计划" };
+export const REGIME_LABELS: Record<Regime, string> = { RANGE: "震荡观察", UPTREND: "偏强运行", STRONG_UP: "强势上涨", DOWNTREND: "偏弱运行", STRONG_DOWN: "强势下跌", UNCERTAIN: "等待结构确认" };
